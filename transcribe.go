@@ -6,12 +6,30 @@ import (
 
 	speech "cloud.google.com/go/speech/apiv2"
 	speechpb "cloud.google.com/go/speech/apiv2/speechpb"
-    storagedata "github.com/googleapis/google-cloudevents-go/cloud/storagedata"
-
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cloudevents/sdk-go/v2/event"
 )
+
+// We only care about payload in the cloud event
+// Tried to use the cloudevents sdk but it did not like the 
+// spec version of the cloud event (the Test Trigger in console)
+// sets the spec version as a float (1.0) and cloudevents sdk expects
+// it to be a string
+type MyCloudEvent struct {
+    Data MyStorageObjectData `json:"data"`
+    Id string `json:"id"`
+}
+
+// Similarly could not use storagedata "github.com/googleapis/google-cloudevents-go/cloud/storagedata"
+// as it expects the metageneration to be a string but was getting a float
+// So had to recreate the struct with what I needed only, what a pain
+type MyStorageObjectData struct {
+    Bucket string `json:"bucket"`
+    Name string `json:"name"`
+    ContentType string `json:"contentType"`
+    LocalOnlyTest bool `json:"localOnlyTest"`  // Custom field for testing, won't call speech to text if true
+}
 
 func init() {
 	// Register a CloudEvent function with the Functions Framework
@@ -21,27 +39,35 @@ func init() {
 // Function TranscribeCloudFunc accepts and handles a CloudEvent
 // when a new audio file is uploaded to a Cloud Storage bucket.
 func transcribeCloudFunc(ctx context.Context, e event.Event) error {
-	log.Println(e)
+	// log.Println(e)
 
-	// Your code here
-	// Access the CloudEvent data payload via e.Data() or e.DataAs(...)
-    // Convert event.Event DataEncoded byte array to an object
-    var data storagedata.StorageObjectData
-
-    if err := e.DataAs(&data); err != nil {
-        log.Printf("failed to convert data: %v", err)
-        return err
+    event := MyCloudEvent{}
+    if err := e.DataAs(&event); err != nil {
+        log.Fatal("e.DataAs: ", err)
+    }
+ 
+    // Check if the content type is audio
+    if event.Data.ContentType != "audio/x-wav" {
+        log.Printf("Exiting - content type is not audio: %v", event.Data.ContentType)
+        return nil
+    }
+    // Check if the folder is the right one
+    if event.Data.Name[:12] != "audio-files/" {
+        log.Printf("Exiting - folder is not audio-files: %v", event.Data.Name[:12])
+        return nil
     }
 
-    // Use the converted object
-    // ...
-    log.Printf("Bucket: %s, Object: %s", data.Bucket, data.Name)
-
-	// Return nil if no error occurred
+    log.Printf("We have file: %v to transcribe to text.  Starting....", event.Data.Name)
+    if !event.Data.LocalOnlyTest {
+        toText(event.Data.Name)
+        log.Println("Transcription has been started.")
+    } else {
+        log.Println("LocalOnlyTest is true, will not call speech to text.")
+    }
 	return nil
 }
 
-func toText() {
+func toText(name string) {
 	ctx := context.Background()
 	c, err := speech.NewClient(ctx)
 	if err != nil {
@@ -50,7 +76,7 @@ func toText() {
 	defer c.Close()
 
 	// The path to the remote audio file to transcribe
-	fileUri := "gs://digest-bucket/audio-files/zoom.wav"
+	fileUri := "gs://digest-bucket/" + name
 	// The path to the transcript result folder.
 	outputUri := "gs://digest-bucket/transcripts"
 	// Recognizer resource name.
@@ -92,8 +118,12 @@ func toText() {
 		Files:                   audioFiles,
 		RecognitionOutputConfig: outputConfig,
 	}
-	_, err = c.BatchRecognize(ctx, req)
+    
+    
+    var op *speech.BatchRecognizeOperation
+	op, err = c.BatchRecognize(ctx, req)
 	if err != nil {
 		log.Fatalf("failed to create BatchRecognize: %v", err)
 	}
+    log.Printf("Created Speech to Text operation: %s", op.Name())
 }

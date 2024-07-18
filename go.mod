@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/speech v1.21.0
 	github.com/GoogleCloudPlatform/functions-framework-go v1.8.1
 	github.com/cloudevents/sdk-go/v2 v2.15.2
-	github.com/googleapis/google-cloudevents-go v0.8.0
 )
 
 require (

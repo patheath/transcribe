@@ -1,0 +1,16 @@
+{
+    "data": {
+        "bucket": "digest-bucket",
+        "contentType": "audio/x-wav",
+        "metageneration": "1",
+        "name": "not-audio-files/zoom.wav",
+        "timeCreated": "2020-05-06T15:14:15.917Z",
+        "updated": "2021-11-25T21:04:32.279744Z"
+    },
+    "datacontenttype": "application/json",
+    "id": "1234567890",
+    "source": "//storage.googleapis.com/projects/_/buckets/sample-bucket",
+    "specversion": 1.0,
+    "time": "2021-11-25T21:04:32.279744Z",
+    "type": "google.cloud.storage.object.v1.finalized"
+}
