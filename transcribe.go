@@ -93,8 +93,15 @@ func toText(name string) {
 		Model:         "long",
 		LanguageCodes: []string{"en-US"},
 		Features: &speechpb.RecognitionFeatures{
-			EnableWordTimeOffsets: true,
-			EnableWordConfidence:  true,
+			EnableWordTimeOffsets: false,
+			EnableWordConfidence:  false,
+            EnableAutomaticPunctuation: true,
+            // Although documentation says its supported Speaker Diarization is not supported in v2
+            // https://www.googlecloudcommunity.com/gc/AI-ML/Speaker-Diarization-is-disabled-even-for-supported-languages-in/m-p/616388
+            // DiarizationConfig: &speechpb.SpeakerDiarizationConfig{
+            //    MinSpeakerCount: 1,
+            //    MaxSpeakerCount: 6,
+            // },
 		},
 	}
 
